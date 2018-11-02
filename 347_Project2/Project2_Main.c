@@ -19,8 +19,8 @@
 
 unsigned int s = 0;
 	
-unsigned long period    = 50000;
-unsigned long dutyCycle = 45998;
+unsigned long period    = 5000;
+//unsigned long dutyCycle = 3000;
 
 // Calculated PWM for 0%, 25%, 50%, 75%, 100%
 // Exact values for 0% and 100% are never used
@@ -133,8 +133,8 @@ void PortD_Init(void){
 	PWM1_0_GENB_R |= 0x0000080C;
 	
 	PWM1_0_LOAD_R = period - 1;           // STEP 7 : set period
-  PWM1_0_CMPA_R = dutyCycle - 1;    		// STEP 8: set duty cycle
-  PWM1_0_CMPB_R =	dutyCycle - 1;
+  PWM1_0_CMPA_R = ain3 - 1;    		// STEP 8: set duty cycle
+  PWM1_0_CMPB_R =	ain3 - 1;
   PWM1_0_CTL_R  |= 0x00000001;   	  // STEP 9: start the M1PWM5 generator
   PWM1_ENABLE_R |= 0x00000003;			// STEP 10: enable   M1PWM0-1 outputs
 }
