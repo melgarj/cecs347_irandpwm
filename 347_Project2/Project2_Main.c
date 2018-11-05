@@ -1,6 +1,7 @@
 #include "ADCSWTrigger.h"
 #include "tm4c123gh6pm.h"
 #include "PLL.h"
+#include "Nokia5110.h"
 
 #define SYSCTL_RCC_USEPWMDIV  0x00100000 // Enable PWM Clock Divisor
 #define SYSCTL_RCC_PWMDIV_M   0x000E0000 // PWM Unit Clock Divisor
@@ -20,7 +21,7 @@
 unsigned int s = 0;
 	
 unsigned long period    = 5000;
-//unsigned long dutyCycle = 3000;
+unsigned long dutyCycle;
 
 // Calculated PWM for 0%, 25%, 50%, 75%, 100%
 // Exact values for 0% and 100% are never used
@@ -32,9 +33,31 @@ unsigned char direction = 0xFF;
 unsigned char pressed = 0;
 unsigned char released = 1;
 
+///////////////////ADC Stuff///////////////////
+int adcTable[] = {4095, 3385, 2276, 1730, 1343, 1059, 887, 857, 791, 732, 692, 636, 583, 548, 0};
+int distTable[] = {0, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 999};
+float distance = 0;
+float calibration = 0;
+float a = 0;
+float b = 0;
+int ia = 0;
+int ib = 0;
+float m = 0;
+float l = 0;
+float lm;
+int i;
+int f;
+float dist1, dist2;
+float DC;
+
+
+
+//////////////////////////////////////////////
+
 //   Function Prototypes
 void PortF_Init(void);
 void PortD_Init(void);
+float calcDist(unsigned long *);
 
 //int period = 0; // set value that will give 40Hz / 25 ms
 char sample = 0;
@@ -69,6 +92,14 @@ int main(void){unsigned long volatile delay;
 	SysTick_Init();
 	PLL_Init();                           // set system clock to 50 MHz
 	PortD_Init();
+	Nokia5110_Init(); 
+  Nokia5110_Clear();
+	
+	// Always Forward
+	LEFTFORWARD   = 0xFF;
+	LEFTBACKWARD  = 0x00;					
+	RIGHTFORWARD  = 0xFF;
+	RIGHTBACKWARD = 0x00; 
 	
   while(1){
     if(sample){
@@ -76,15 +107,82 @@ int main(void){unsigned long volatile delay;
 			ADC_In298(&ain1, &ain2, &ain3); // Ensure sampler works
 			GPIO_PORTF_DATA_R ^= 0x04;
 			
-			PWM1_0_CMPA_R = ain3 -1;
-			PWM1_0_CMPB_R = ain3 -1;
+			// Update Motors
+			dutyCycle = ain3-1;
+			PWM1_0_CMPA_R = dutyCycle;
+			PWM1_0_CMPB_R = dutyCycle;
+			
+			//Update Sensors
+			// Find distance
+		for(i = 0; i < 15; i = i + 1){
+			if(ain1 > adcTable[i]){
+				break;
+			}
+			else{
+				a = adcTable[i+1];
+				ia = i+1;
+			}
 		}
 		
-		LEFTFORWARD   = 0xFF;
-		LEFTBACKWARD  = 0x00;					
-	  RIGHTFORWARD  = 0xFF;
-		RIGHTBACKWARD = 0x00; 
+		for(f = 0; f < 15; f = f + 1){
+			if(ain1 < adcTable[f]){
+				b = adcTable[f];
+				ib = f;
+			}
+			else {
+				break;
+			}
+		}
+		 m = b - a;
+		 l = b - ain1;
+		lm = l / m ;
 		
+		dist1 = distTable[ib] + (lm * 5);
+		
+		// Find distance
+		for(i = 0; i < 15; i = i + 1){
+			if(ain2 > adcTable[i]){
+				break;
+			}
+			else{
+				a = adcTable[i+1];
+				ia = i+1;
+			}
+		}
+		
+		for(f = 0; f < 15; f = f + 1){
+			if(ain2 < adcTable[f]){
+				b = adcTable[f];
+				ib = f;
+			}
+			else {
+				break;
+			}
+		}
+		 m = b - a;
+		 l = b - ain2;
+		lm = l / m ;
+		
+		dist2 = distTable[ib] + (lm * 5);
+		
+		DC = (ain3*100)/4095;
+		DC = 100 - DC; 
+		
+			//Update LCD
+			Nokia5110_SetCursor(0,0);
+			Nokia5110_OutString("Duty Cycle:");
+			Nokia5110_SetCursor(0,1);
+			Nokia5110_OutUDec(DC);
+			Nokia5110_SetCursor(0,2);
+			Nokia5110_OutString("Sensor 1:");
+			Nokia5110_SetCursor(0,3);
+			Nokia5110_OutUDec(dist1);
+			Nokia5110_SetCursor(0,4);
+			Nokia5110_OutString("Sensor 2:");
+			Nokia5110_SetCursor(0,5);
+			Nokia5110_OutUDec(dist2);
+			
+		}
   }
 }
 
@@ -138,3 +236,33 @@ void PortD_Init(void){
   PWM1_0_CTL_R  |= 0x00000001;   	  // STEP 9: start the M1PWM5 generator
   PWM1_ENABLE_R |= 0x00000003;			// STEP 10: enable   M1PWM0-1 outputs
 }
+/*
+float calcDist(unsigned long *ADCValue){
+	for(i = 0; i < 15; i = i + 1){
+			if(ADCvalue > adcTable[i]){
+				break;
+			}
+			else{
+				a = adcTable[i+1];
+				ia = i+1;
+			}
+		}
+		
+		for(f = 0; f < 15; f = f + 1){
+			if(ADCvalue < adcTable[f]){
+				b = adcTable[f];
+				ib = f;
+			}
+			else {
+				break;
+			}
+		}
+		 m = b - a;
+		 l = b - ADCvalue;
+		lm = l / m ;
+		
+		distance = distTable[ib] + (lm * 5);
+		return distance;
+}
+*/
+
