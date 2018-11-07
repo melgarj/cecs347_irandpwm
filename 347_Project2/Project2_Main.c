@@ -34,7 +34,7 @@ unsigned char pressed = 0;
 unsigned char released = 1;
 
 ///////////////////ADC Stuff///////////////////
-int adcTable[] = {4095, 3385, 2276, 1730, 1343, 1059, 887, 857, 791, 732, 692, 636, 583, 548, 0};
+int adcTable[] = {4095, 3050, 1980, 1370, 950, 860, 730, 650, 570, 530, 460, 390, 330, 300, 0};
 int distTable[] = {0, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 999};
 float distance = 0;
 float calibration = 0;
@@ -176,11 +176,13 @@ int main(void){unsigned long volatile delay;
 			Nokia5110_SetCursor(0,2);
 			Nokia5110_OutString("Sensor 1:");
 			Nokia5110_SetCursor(0,3);
-			Nokia5110_OutUDec(dist1);
+			if(dist1 > 60) Nokia5110_OutString("  OOR");
+			else Nokia5110_OutUDec(dist1);
 			Nokia5110_SetCursor(0,4);
 			Nokia5110_OutString("Sensor 2:");
 			Nokia5110_SetCursor(0,5);
-			Nokia5110_OutUDec(dist2);
+			if (dist2 >60) Nokia5110_OutString("  OOR");
+			else Nokia5110_OutUDec(dist2);
 			
 		}
   }
